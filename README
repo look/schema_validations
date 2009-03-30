@@ -13,6 +13,7 @@ The plugin supports the following constraints:
 
 * <code>NOT NULL</code> is converted to +validates_presence_of+ (including +belongs_to+ associations);
 * Numbers are checked using +validates_numericality_of+ (including <code>:only_integer => true</code>);
+* Decimals are checked using +validates_numericality_of+'s <code>:greater_than</code> and <code>:less_than</code> to ensure they do not overflow;
 * String lengths are checked using +validates_length_of+;
 * Single-column unique indexes are converted to +validates_uniqueness_of+; and
 * Multi-column unique indexes are converted to +validates_uniqueness_of+ with +scope+.
