@@ -61,6 +61,10 @@ module RedHillConsulting::SchemaValidations::ActiveRecord
           # Data-type validation
           if column.type == :integer
             validates_numericality_of name, :allow_nil => true, :only_integer => true
+          elsif column.type == :decimal
+            max_decimal = (10 ** (column.precision - column.scale)) - (1.0/(10 ** column.scale))
+
+            validates_numericality_of name, :allow_nil => true, :less_than => max_decimal, :greater_than => -max_decimal
           elsif column.number?
             validates_numericality_of name, :allow_nil => true
           elsif column.text? && column.limit
