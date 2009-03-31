@@ -27,6 +27,7 @@ module RedHillConsulting::SchemaValidations::ActiveRecord
           @schema_validations_column_include = false
         else
           # if neither only nor except is provided, include all columns
+          column_names = content_columns.map(&:name)
           @schema_validations_column_include = true
         end
         
