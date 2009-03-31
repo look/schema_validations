@@ -44,6 +44,24 @@ or an array of columns:
   class Country < ActiveRecord::Base
     schema_validations :except => [:isocode, :iddcode]
   end
+  
+Validation can also be limited to three specific types of validations: data_type, :not_null, and :unique.
+
+Using this feature you can specify some of your validations with the plugin and some in your model where you can more easily change the messages.
+
+For example, to only generate data type validations (like size constraints), you can use:
+
+  class Country < ActiveRecord::Base
+    schema_validations :validate => :data_type
+  end
+
+Or, to validate data types and NOT NULL, use:
+
+  class Country < ActiveRecord::Base
+    schema_validations :validate => [:data_type, :not_null]
+  end
+  
+The default is all three types of validations.
 
 === Dependencies
 

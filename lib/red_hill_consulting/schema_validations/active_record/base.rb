@@ -25,7 +25,12 @@ module RedHillConsulting::SchemaValidations::ActiveRecord
         elsif options[:except]
           column_names = options[:except]
           @schema_validations_column_include = false
+        else
+          # if neither only nor except is provided, include all columns
+          @schema_validations_column_include = true
         end
+        
+        @schema_validations_options = Array(options[:validate] || [:data_type, :unique, :not_null])
 
         @schema_validations_column_names = Array(column_names).map(&:to_s)
       end
@@ -56,40 +61,54 @@ module RedHillConsulting::SchemaValidations::ActiveRecord
         content_columns.each do |column|
           next unless validates?(column)
 
-          name = column.name.to_sym
-
-          # Data-type validation
-          if column.type == :integer
-            validates_numericality_of name, :allow_nil => true, :only_integer => true
-          elsif column.type == :decimal
-            max_decimal = (10 ** (column.precision - column.scale)) - (1.0/(10 ** column.scale))
-
-            validates_numericality_of name, :allow_nil => true, :less_than => max_decimal, :greater_than => -max_decimal
-          elsif column.number?
-            validates_numericality_of name, :allow_nil => true
-          elsif column.text? && column.limit
-            validates_length_of name, :allow_nil => true, :maximum => column.limit
-          end
-
-          # NOT NULL constraints
-          if column.required_on
-            # Work-around for a "feature" of the way validates_presence_of handles boolean fields
-            # See http://dev.rubyonrails.org/ticket/5090 and http://dev.rubyonrails.org/ticket/3334
-            if column.type == :boolean
-              validates_inclusion_of name, :on => column.required_on, :in => [true, false], :message => I18n.translate('activerecord.errors.messages.blank')
-            else
-              validates_presence_of name, :on => column.required_on
-            end
-          end
-
-          # UNIQUE constraints
-          validates_uniqueness_of name, \
-                                  :scope => column.unique_scope.map(&:to_sym), \
-                                  :allow_nil => true, \
-                                  :case_sensitive => column.case_sensitive?, \
-                                  :if => "#{name}_changed?".to_sym \
-                                  if column.unique?
+          add_data_type_validations(column) if validates_data_type?
+          
+          add_not_null_validations(column) if validates_not_null?
+          
+          add_unique_validations(column) if validates_uniqueness?
         end
+      end
+      
+      
+      def add_data_type_validations(column)
+        name = column.name.to_sym
+        
+        if column.type == :integer
+          validates_numericality_of name, :allow_nil => true, :only_integer => true
+        elsif column.type == :decimal
+          max_decimal = (10 ** (column.precision - column.scale)) - (1.0/(10 ** column.scale))
+
+          validates_numericality_of name, :allow_nil => true, :less_than => max_decimal, :greater_than => -max_decimal
+        elsif column.number?
+          validates_numericality_of name, :allow_nil => true
+        elsif column.text? && column.limit
+          validates_length_of name, :allow_nil => true, :maximum => column.limit
+        end
+      end
+      
+      def add_not_null_validations(column)
+        name = column.name.to_sym
+        
+        if column.required_on
+          # Work-around for a "feature" of the way validates_presence_of handles boolean fields
+          # See http://dev.rubyonrails.org/ticket/5090 and http://dev.rubyonrails.org/ticket/3334
+          if column.type == :boolean
+            validates_inclusion_of name, :on => column.required_on, :in => [true, false], :message => I18n.translate('activerecord.errors.messages.blank')
+          else
+            validates_presence_of name, :on => column.required_on
+          end
+        end
+      end
+      
+      def add_unique_validations(column)
+        name = column.name.to_sym
+        
+        validates_uniqueness_of name, \
+                                :scope => column.unique_scope.map(&:to_sym), \
+                                :allow_nil => true, \
+                                :case_sensitive => column.case_sensitive?, \
+                                :if => "#{name}_changed?".to_sym \
+                                if column.unique?
       end
       
       def load_association_validations
@@ -115,6 +134,18 @@ module RedHillConsulting::SchemaValidations::ActiveRecord
       def validates?(column)
         column.name !~ /^(((created|updated)_(at|on))|position)$/ &&
           (@schema_validations_column_names.nil? || @schema_validations_column_names.include?(column.name) == @schema_validations_column_include)
+      end
+      
+      def validates_data_type?
+        @schema_validations_options.nil? || @schema_validations_options.include?(:data_type)
+      end
+      
+      def validates_uniqueness?
+        @schema_validations_options.nil? || @schema_validations_options.include?(:unique)
+      end
+      
+      def validates_not_null?
+        @schema_validations_options.nil? || @schema_validations_options.include?(:not_null)
       end
     end
   end
