@@ -18,6 +18,8 @@ module RedHillConsulting::SchemaValidations::ActiveRecord
       end
 
       def schema_validations(options = {})
+        return unless table_exists?
+        
         column_names = []
         if options[:only]
           column_names = options[:only]
